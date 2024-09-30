@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package generated;
+
+option go_package = "generated/";
+
+import "google/protobuf/empty.proto";
+
+service Node {
+  rpc Handshake(NodeDetails) returns (NodeDetails);
+
+  rpc HandleTransaction(Transaction) returns (google.protobuf.Empty);
+}
+
+message NodeDetails {
+  int32 version = 1;
+  int32 height = 2;
+}
+
+// A block is composed of a header and transactions.
+message Block {
+  BlockHeader header = 1;
+  repeated Transaction transactions = 2;
+}
+
+message BlockHeader {
+  int32 version = 1;
+  int32 height = 2;
+  bytes previousBlockHash = 3;
+  bytes transactionsMerkleTreeRootHash = 4;
+  int64 timestamp = 5;
+}
+
+/*
+  UTXO (Unspent Transaction Output) Model :
+
+  UTXO Model is used in cryptocurrencies like Bitcoin, to represent ownership
+  and transfer of funds.
+
+  A UTXO represents a specific amount of cryptocurrency locked to a specific
+  public key (often hashed into an address). UTXOs are created by transaction
+  outputs and remain valid (unspent) until they are referenced as an input in a
+  new transaction.
+
+    (1) When a transaction creates outputs, they become UTXOs.
+
+    (2) When a transaction consumes outputs (as inputs), those UTXOs are
+        considered spent and are no longer valid for future transactions.
+
+  NOTE : The model used by Ethereum is Accounts instead of UTXO.
+
+  Example :
+
+    Alice owns 10 BTC, locked in a UTXO from a previous transaction tx1 with the
+  output index 0. This UTXO represents 10 BTC, locked to Alice's public key.
+  Now, she wants to send 7 BTC to Bob. To do this, she creates a new transaction
+  (tx2) with :
+
+    Input : Refers to UTXO1 from tx1, consuming it.
+
+    Outputs :
+      (1) 7 BTC to Bob (creating a new UTXO for Bob).
+      (2) 3 BTC back to Alice as change (creating a new UTXO for Alice).
+
+  After this transaction is processed, UTXO1 is marked as spent. UNTXO2 and
+  UTXO3 are created and are unspent.
+
+  Features :
+
+  (1) Each transaction is stateless in the UTXO model, meaning that the system
+  does not maintain a global state of account balances. Instead, ownership is
+  determined by a collection of UTXOs that are either spent or unspent. To
+  calculate someone's balance, the system must sum all UTXOs associated with
+  their address.
+
+  (2) Since UTXOs are independent of each other, different UTXOs can be spent in
+  parallel transactions, enhancing scalability. There are no conflicts as long
+  as each UTXO is only spent once.
+
+  (3) The UTXO model provides increased privacy compared to the account model,
+  as users can create many different addresses, and a single transaction may
+  involve multiple inputs and outputs. This makes it harder to trace specific
+  amounts back to individuals.
+
+  However, transactions in the UTXO model may become large if they involve many
+  inputs, which can increase block sizes and transaction fees.
+*/
+
+message Transaction {
+  int32 version = 1;
+  repeated TransactionInput inputs = 2;
+  repeated TransactionOutput outputs = 3;
+}
+
+message TransactionInput {
+  bytes previousTransactionHash = 1;
+  uint32 previousTransactionOutputIndex = 2;
+
+  // Details of the person initiates the transaction.
+  bytes publicKey = 3;
+  bytes signature = 4;
+}
+
+message TransactionOutput {
+  int64 amount = 1;
+  bytes toAddress = 2;
+}
